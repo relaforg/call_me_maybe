@@ -1,5 +1,6 @@
 from src.llm_sdk import Small_LLM_Model
 from typing import Dict
+from math import log, exp
 
 
 def choose_constant_token(logits, token):
@@ -16,30 +17,38 @@ def get_max_logits_index(logits):
     return (max_i)
 
 
-def choose_func(logits, func_dict, tokens):
-    func_tokens = [llm.encode(i)[0].tolist() for i in func_dict.keys()]
-    count = 0
-    choice = []
-    while (len(func_tokens)):
-        candidates = [seq for seq in func_tokens if len(
-            seq) > count and seq[:count] == choice]
-        if not candidates:
-            raise RuntimeError(
-                "No candidates left (cannot complete a function name)")
-        allowed = {seq[count] for seq in candidates}
-        logits = llm.get_logits_from_input_ids(tokens)
-        for i in range(len(logits)):
-            if (i not in allowed):
-                logits[i] = float("-inf")
-            elif (llm.decode(i)[0] in prompt):
-                logits[i] *= 10
-        max = get_max_logits_index(logits)
-        print(llm.decode(max), end="")
-        choice.append(max)
-        tokens.append(max)
-        count += 1
-        if (choice in func_tokens):
-            break
+def logsumexp(xs):
+    m = max(xs)
+    return m + log(sum(exp(x - m) for x in xs))
+
+
+def compute_avg_logprob(prob_list):
+    if (len(prob_list) == 0):
+        return (0)
+    sum = 0
+    for i in prob_list:
+        sum += i
+    return (sum / len(prob_list))
+
+
+def choose_func(func_dict, tokens):
+    best_name = ""
+    best_prob = float("-inf")
+    for name, value in func_dict.items():
+        logprob_list = []
+        name_tokens = llm.encode(
+            "The best function to answer the question is " + name)[0].tolist()
+        tmp_tokens = list(tokens)
+        for t in range(len(name_tokens)):
+            logits = llm.get_logits_from_input_ids(tmp_tokens)
+            logprob_list.append(
+                logits[name_tokens[t]] - logsumexp(logits))
+            tmp_tokens.append(name_tokens[t])
+        avg_prob = compute_avg_logprob(logprob_list)
+        if (avg_prob > best_prob):
+            best_prob = avg_prob
+            best_name = name
+    print(best_name, end="")
 
 
 schema = """
@@ -52,9 +61,7 @@ schema = """
 """
 
 llm = Small_LLM_Model()
-prompt = (
-    "What is the sum of 40 and 2?"
-)
+prompt = "What is the sum of 40 and 2?"
 func_dict = {
     "fn_add_numbers": {
         "description": "Add two numbers together and return their sum.",
@@ -120,6 +127,8 @@ func_dict = {
             "type": "string"
         }
     }
+
+
 }
 
 test = llm.encode(prompt)
@@ -139,20 +148,20 @@ for i in tokens:
     logits = llm.get_logits_from_input_ids(tokens_prompt)
     if (i != 151657):
         choose_constant_token(logits, i)
-        max = get_max_logits_index(logits)
-        # print(max)
-        print(llm.decode(max), end="")
-        tokens_prompt.append(max)
+        nxt = get_max_logits_index(logits)
+        # print(nxt)
+        print(llm.decode(nxt), end="")
+        tokens_prompt.append(nxt)
     elif (count == 0):
         for j in tokens_base:
             logits = llm.get_logits_from_input_ids(tokens_prompt)
             choose_constant_token(logits, j)
-            max = get_max_logits_index(logits)
-            print(llm.decode(max), end="")
-            tokens_prompt.append(max)
+            nxt = get_max_logits_index(logits)
+            print(llm.decode(nxt), end="")
+            tokens_prompt.append(nxt)
         count += 1
     elif (count == 1):
-        choose_func(logits, func_dict, tokens_prompt)
+        choose_func(func_dict, tokens_prompt)
     if (i == 151643):
         break
 print()

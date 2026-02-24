@@ -11,6 +11,7 @@
 >valid structure, without relying on prompting alone.
 
 [A Guide to Structured Generation Using Constrained Decoding](https://www.aidancooper.co.uk/constrained-decoding/)
+[Building Intuition on Log Probabilities in Language Models](https://medium.com/ai-assimilating-intelligence/building-intuition-on-log-probabilities-in-language-models-8fd00f34c03c)
 Generate a schema
 
 ```python
