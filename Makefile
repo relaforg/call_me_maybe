@@ -12,7 +12,7 @@ debug:
 	@uv run python -m pdb -m src
 
 clean:
-	rm -f  __pycache__ .mypy_cache
+	rm -fdr  __pycache__ .mypy_cache
 
 lint:
 	@uv run python -m flake8 src
