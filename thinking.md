@@ -11,6 +11,7 @@
 >valid structure, without relying on prompting alone.
 
 [A Guide to Structured Generation Using Constrained Decoding](https://www.aidancooper.co.uk/constrained-decoding/)
+
 [Building Intuition on Log Probabilities in Language Models](https://medium.com/ai-assimilating-intelligence/building-intuition-on-log-probabilities-in-language-models-8fd00f34c03c)
 Generate a schema
 
@@ -27,6 +28,13 @@ schema = """
 To choose a function:
 I have can do something like backtracking ?
 Or I can just go with the best and go from there
+
+To get params:
+focus on numbers
+Si le meilleur token n'est pas un token valid fin
+sinon ajouter le token
+
+Check le vocab pour opti
 
 ## Input Files
 
