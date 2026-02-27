@@ -5,6 +5,9 @@ MYPY_FLAGS = --warn-return-any \
 run:
 	@uv run python -m src
 
+time:
+	time uv run python -m src
+
 install:
 	@uv pip install -r requirements.txt
 
