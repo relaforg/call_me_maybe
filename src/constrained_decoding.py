@@ -148,6 +148,15 @@ class ConstrainedDecoding:
             case "string" | _:
                 return self._get_string_param()
 
+    def _add_string(self, s: str):
+        token_list = self.llm.encode(s)[0].tolist()
+        for i in token_list:
+            logits = self.llm.get_logits_from_input_ids(
+                self.context)
+            nxt = self._choose_constrained_token(logits, {i})
+            self.out.append(nxt)
+            self.context.append(nxt)
+
     def run(self, prompt: str) -> str:
         self.context = self.llm.encode(prompt)[0].tolist()
         self.out = []
@@ -175,32 +184,20 @@ class ConstrainedDecoding:
                 func_name = self._choose_func()
                 func_context = [
                     f for f in self.func_dict if f["name"] == func_name][0]
-                self.context += self.llm.encode(func_name + " " +
-                                                f"\n{str(func_context)}")[0].tolist()
+                self.context += \
+                    self.llm.encode(func_name + " " +
+                                    f"\n{str(func_context)}")[0].tolist()
                 count += 1
             elif (count == 2):
-                COMMA_SPACE = self.llm.encode(", ")[0].tolist()
                 func_context = [
                     f for f in self.func_dict if f["name"] == func_name][0]
                 for c, param in enumerate(func_context["parameters"].items()):
                     name, param_type = param
                     parameters = f'"{name}": '
-                    param_tokens = self.llm.encode(parameters)[0].tolist()
-                    for j in param_tokens:
-                        logits = self.llm.get_logits_from_input_ids(
-                            self.context)
-                        nxt = self._choose_constrained_token(logits, {j})
-                        self.out.append(nxt)
-                        self.context.append(nxt)
+                    self._add_string(parameters)
                     self._get_param(param_type)
                     if (c < len(func_context["parameters"]) - 1):
-                        param_tokens = COMMA_SPACE
-                        for j in param_tokens:
-                            logits = self.llm.get_logits_from_input_ids(
-                                self.context)
-                            nxt = self._choose_constrained_token(logits, {j})
-                            self.out.append(nxt)
-                            self.context.append(nxt)
+                        self._add_string(", ")
                 count += 1
             if (i == self.EOT_TOKEN):
                 break

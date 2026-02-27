@@ -1,78 +1,50 @@
 from .constrained_decoding import ConstrainedDecoding
-from pprint import pprint
 import json
+from typing import Dict
 
 
-# func_dict = {
-#     "fn_add_numbers": {
-#         "description": "Add two numbers together and return their sum.",
-#         "parameters": {
-#             "a": {
-#                 "type": "number"
-#             },
-#             "b": {
-#                 "type": "number"
-#             }
-#         },
-#         "returns": {
-#             "type": "number"
-#         }
-#     },
-#     "fn_greet": {
-#         "description": "Generate a greeting message for a person by name.",
-#         "parameters": {
-#             "name": {
-#                 "type": "string"
-#             }
-#         },
-#         "returns": {
-#             "type": "string"
-#         }
-#     },
-#     "fn_reverse_string": {
-#         "description": "Reverse a string and return the reversed result.",
-#         "parameters": {
-#             "s": {
-#                 "type": "string"
-#             }
-#         },
-#         "returns": {
-#             "type": "string"
-#         }
-#     },
-#     "fn_get_square_root": {
-#         "description": "Calculate the square root of a number.",
-#         "parameters": {
-#             "a": {
-#                 "type": "number"
-#             }
-#         },
-#         "returns": {
-#             "type": "number"
-#         }
-#     },
-#     "fn_substitute_string_with_regex": {
-#         "description": "Replace all occurrences matching \
-# a regex pattern in a string.",
-#         "parameters": {
-#             "source_string": {
-#                 "type": "string"
-#             },
-#             "regex": {
-#                 "type": "string"
-#             },
-#             "replacement": {
-#                 "type": "string"
-#             }
-#         },
-#         "returns": {
-#             "type": "string"
-#         }
-#     }
-# }
+def exit_parsing(function_context: Dict):
+    print("Function definition is incorect\n" + str(function_context))
+    exit(1)
+
+
+def validate_param(param: Dict) -> int:
+    if (not isinstance(param, dict)):
+        return (1)
+    if (not param.get("type")):
+        return (1)
+    if (not isinstance(param["type"], str)):
+        return (1)
+    return (0)
+
+
+def validate_parameters(params: Dict) -> int:
+    for name, value in params.items():
+        if (validate_param(value)):
+            return (1)
+    return (0)
+
 
 with open("data/input/functions_definition.json", "r") as file:
     data = json.load(file)
+
+for f in data:
+    if (
+        not f.get("name") or
+        not f.get("description") or
+        not f.get("parameters") or
+        not f.get("returns")
+    ):
+        exit_parsing(f)
+    if (
+        not isinstance(f["name"], str) or
+        not isinstance(f["description"], str)
+    ):
+        exit_parsing(f)
+    if (validate_parameters(f["parameters"])):
+        exit_parsing(f)
+    if (validate_param(f["returns"])):
+        exit_parsing(f)
 
 prompt = "What is the sum of 40 and 2?"
 test = ConstrainedDecoding(data)
