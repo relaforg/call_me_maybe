@@ -47,8 +47,18 @@ for f in data:
     if (validate_param(f["returns"])):
         exit_parsing(f)
 
-prompt = "What is the sum of 40 and 2?"
+with open("data/input/function_calling_tests.json") as file:
+    prompts = json.load(file)
+
+
+# prompt = "What is the sum of 40 and 2?"
+prompt = "Replace all vowels in 'Programming is fun' with asterisks"
 test = ConstrainedDecoding(data)
-t1 = time()
-print(test.run(prompt))
-print(f"Done in {time() - t1} seconds")
+for p in prompts:
+    if (not p.get("prompt")):
+        print(f"Cannot process {p}")
+        continue
+    print(p["prompt"])
+    t1 = time()
+    print(test.run(p["prompt"]))
+    print(f"Done in {time() - t1:.3f} seconds\n")

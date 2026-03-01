@@ -1,11 +1,13 @@
 from llm_sdk import Small_LLM_Model
 from typing import Set, List
-from math import exp, log
+from time import time
 import numpy as np
+from pprint import pprint
 
 
 class ConstrainedDecoding:
     def __init__(self, func_dict):
+        pprint(func_dict)
         self.llm = Small_LLM_Model()
         self.func_dict = func_dict
         self.out = []
@@ -42,18 +44,15 @@ class ConstrainedDecoding:
             nbrs.add(self.llm.encode(i)[0].tolist()[0])
         return (nbrs)
 
-    def _choose_constrained_token(self, logits: List[float], allowed: Set) -> int:
-        max_t = float("-inf")
-        nxt = -1
-        for t in allowed:
-            if (logits[t] > max_t or nxt == -1):
-                nxt = t
-                max_t = logits[t]
-        return (nxt)
+    def _choose_constrained_token(self, logits, allowed):
+        logits_np = np.asarray(logits, dtype=np.float64)
+        allowed_np = np.fromiter(allowed, dtype=np.int64)
+        return int(allowed_np[np.argmax(logits_np[allowed_np])])
 
-    def _logsumexp(self, xs):
-        m = max(xs)
-        return (m + log(sum(exp(x - m) for x in xs)))
+    def _logsumexp(self, xs) -> float:
+        x = np.asarray(xs, dtype=np.float64)
+        m = x.max()
+        return float(m + np.log(np.exp(x - m).sum()))
 
     def _compute_avg_logprob(self, prob_list):
         if (len(prob_list) == 0):
@@ -66,15 +65,20 @@ class ConstrainedDecoding:
     def _choose_func(self):
         best_name = ""
         best_prob = float("-inf")
-        for name in [f["name"] for f in self.func_dict]:
-            logprob_list = []
-            name_tokens = self.llm.encode(name)[0].tolist()
-            tmp_tokens = list(self.context)
-            for t in range(len(name_tokens)):
-                logits = self.llm.get_logits_from_input_ids(tmp_tokens)
-                logprob_list.append(
-                    logits[name_tokens[t]] - self._logsumexp_np(logits))
-                tmp_tokens.append(name_tokens[t])
+
+        root_logits = self.llm.get_logits_from_input_ids(self.context)
+        lse_root = self._logsumexp(root_logits)
+        for name, tokens in self._func_name_tokens.items():
+            logprob_list = [float(root_logits[tokens[0]]) - lse_root]
+
+            if len(tokens) > 1:
+                tmp_tokens = list(self.context) + [tokens[0]]
+                for t in tokens[1:]:
+                    logits = self.llm.get_logits_from_input_ids(tmp_tokens)
+                    logprob_list.append(
+                        float(logits[t]) - self._logsumexp(logits))
+                    tmp_tokens.append(t)
+
             avg_prob = self._compute_avg_logprob(logprob_list)
             if (avg_prob > best_prob):
                 best_prob = avg_prob
@@ -93,15 +97,12 @@ class ConstrainedDecoding:
 
     def _get_number_param(self):
         allowed = self.NUMBER_ALLOWED & set(self.prompt_tokens)
+        if (not len(allowed)):
+            allowed = set(self.prompt_tokens)
         param_tokens = []
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
-            max_t = float("-inf")
-            nxt = -1
-            for t in allowed:
-                if (logits[t] > max_t or nxt == -1):
-                    nxt = t
-                    max_t = logits[t]
+            nxt = self._choose_constrained_token(logits, allowed)
             if not self._is_subsequence(param_tokens
                                         + [nxt], self.prompt_tokens):
                 break
@@ -116,12 +117,7 @@ class ConstrainedDecoding:
         allowed = set(self.prompt_tokens)
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
-            max_t = float("-inf")
-            nxt = -1
-            for t in allowed:
-                if (logits[t] > max_t or nxt == -1):
-                    nxt = t
-                    max_t = logits[t]
+            nxt = self._choose_constrained_token(logits, allowed)
             if not self._is_subsequence(param_tokens
                                         + [nxt], self.prompt_tokens):
                 break
@@ -133,12 +129,7 @@ class ConstrainedDecoding:
 
     def _get_bool_param(self):
         logits = self.llm.get_logits_from_input_ids(self.context)
-        max_t = float("-inf")
-        nxt = -1
-        for t in self.BOOL_ALLOWED:
-            if (logits[t] > max_t or nxt == -1):
-                nxt = t
-                max_t = logits[t]
+        nxt = self._choose_constrained_token(logits, self.BOOL_ALLOWED)
         self.out.append(nxt)
         self.context.append(nxt)
 
@@ -176,7 +167,9 @@ class ConstrainedDecoding:
                     self.context.append(j)
                 count += 1
             elif (count == 1):
+                t1 = time()
                 func_name = self._choose_func()
+                print(f"Function choosing done in {time() - t1:.3f} seconds")
                 func_context = [
                     f for f in self.func_dict if f["name"] == func_name][0]
                 self.context += \
@@ -190,7 +183,10 @@ class ConstrainedDecoding:
                     name, param_type = param
                     parameters = f'"{name}": '
                     self._add_string(parameters)
+                    t1 = time()
                     self._get_param(param_type)
+                    print(
+                        f"Get param {c + 1} done in {time() - t1:.3f} seconds")
                     if (c < len(func_context["parameters"]) - 1):
                         self._add_string(", ")
                 count += 1
