@@ -1,7 +1,7 @@
 from llm_sdk import Small_LLM_Model
-from torch import Tensor
-from typing import Set
+from typing import Set, List
 from math import exp, log
+import numpy as np
 
 
 class ConstrainedDecoding:
@@ -25,6 +25,10 @@ class ConstrainedDecoding:
         self.SCHEMA_TOKENS = self.llm.encode(self.SCHEMA)[0].tolist()
         self.TOOL_CALL_TOKEN = 151657
         self.EOT_TOKEN = 151643
+        self._func_name_tokens: dict[str, list[int]] = {
+            f["name"]: self.llm.encode(f["name"])[0].tolist()
+            for f in self.func_dict
+        }
 
     def _get_bool_allowed(self):
         allowed = set()
@@ -38,7 +42,7 @@ class ConstrainedDecoding:
             nbrs.add(self.llm.encode(i)[0].tolist()[0])
         return (nbrs)
 
-    def _choose_constrained_token(self, logits: Tensor, allowed: Set) -> int:
+    def _choose_constrained_token(self, logits: List[float], allowed: Set) -> int:
         max_t = float("-inf")
         nxt = -1
         for t in allowed:
@@ -62,7 +66,6 @@ class ConstrainedDecoding:
     def _choose_func(self):
         best_name = ""
         best_prob = float("-inf")
-        # for name, value in self.func_dict.items():
         for name in [f["name"] for f in self.func_dict]:
             logprob_list = []
             name_tokens = self.llm.encode(name)[0].tolist()
@@ -70,7 +73,7 @@ class ConstrainedDecoding:
             for t in range(len(name_tokens)):
                 logits = self.llm.get_logits_from_input_ids(tmp_tokens)
                 logprob_list.append(
-                    logits[name_tokens[t]] - self._logsumexp(logits))
+                    logits[name_tokens[t]] - self._logsumexp_np(logits))
                 tmp_tokens.append(name_tokens[t])
             avg_prob = self._compute_avg_logprob(logprob_list)
             if (avg_prob > best_prob):
@@ -151,34 +154,26 @@ class ConstrainedDecoding:
     def _add_string(self, s: str):
         token_list = self.llm.encode(s)[0].tolist()
         for i in token_list:
-            logits = self.llm.get_logits_from_input_ids(
-                self.context)
-            nxt = self._choose_constrained_token(logits, {i})
-            self.out.append(nxt)
-            self.context.append(nxt)
+            self.out.append(i)
+            self.context.append(i)
 
     def run(self, prompt: str) -> str:
         self.context = self.llm.encode(prompt)[0].tolist()
         self.out = []
         self.prompt_tokens = list(self.context)
         func_string = "functions:\n"
-        # for name, value in self.func_dict.items():
         for f in self.func_dict:
             func_string += f"- {f['name']} ({f['parameters']})\n"
         self.context += self.llm.encode(func_string)[0].tolist()
         count = 0
         for i in self.SCHEMA_TOKENS:
-            logits = self.llm.get_logits_from_input_ids(self.context)
             if (i != self.TOOL_CALL_TOKEN):
-                nxt = self._choose_constrained_token(logits, {i})
-                self.out.append(nxt)
-                self.context.append(nxt)
+                self.out.append(i)
+                self.context.append(i)
             elif (count == 0):
                 for j in self.prompt_tokens:
-                    logits = self.llm.get_logits_from_input_ids(self.context)
-                    nxt = self._choose_constrained_token(logits, {j})
-                    self.out.append(nxt)
-                    self.context.append(nxt)
+                    self.out.append(j)
+                    self.context.append(j)
                 count += 1
             elif (count == 1):
                 func_name = self._choose_func()

@@ -1,6 +1,7 @@
 from .constrained_decoding import ConstrainedDecoding
 import json
 from typing import Dict
+from time import time
 
 
 def exit_parsing(function_context: Dict):
@@ -48,4 +49,6 @@ for f in data:
 
 prompt = "What is the sum of 40 and 2?"
 test = ConstrainedDecoding(data)
+t1 = time()
 print(test.run(prompt))
+print(f"Done in {time() - t1} seconds")
