@@ -2,6 +2,7 @@ from llm_sdk import Small_LLM_Model
 from typing import Set, List, Dict
 from time import time
 import numpy as np
+import json
 
 
 class ConstrainedDecoding:
@@ -146,7 +147,7 @@ class ConstrainedDecoding:
             self.context.append(i)
 
     def run(self, prompt: str) -> str:
-        prompt = prompt.replace("\\", "\\\\").replace('"', '\\"')
+        prompt = json.dumps(prompt)[1:-1]
         self.context = self.llm.encode(prompt)[0].tolist()
         self.out = []
         self.prompt_tokens = list(self.context)
