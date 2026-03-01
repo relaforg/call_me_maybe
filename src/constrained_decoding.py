@@ -1,18 +1,16 @@
 from llm_sdk import Small_LLM_Model
-from typing import Set, List
+from typing import Set, List, Dict
 from time import time
 import numpy as np
-from pprint import pprint
 
 
 class ConstrainedDecoding:
-    def __init__(self, func_dict):
-        pprint(func_dict)
+    def __init__(self, func_dict: List[Dict]) -> None:
         self.llm = Small_LLM_Model()
         self.func_dict = func_dict
-        self.out = []
-        self.context = []
-        self.prompt_tokens = []
+        self.out: List[int] = []
+        self.context: List[int] = []
+        self.prompt_tokens: List[int] = []
         self.NUMBER_ALLOWED = self._get_number_allowed()
         self.QUOTE_TOKEN = self.llm.encode("\"")[0].tolist()[0]
         self.BOOL_ALLOWED = self._get_bool_allowed()
@@ -22,8 +20,7 @@ class ConstrainedDecoding:
 \t"name": "<tool_call>",
 \t"parameters": {<tool_call>}
 }
-<|endoftext|>
-        """
+<|endoftext|>"""
         self.SCHEMA_TOKENS = self.llm.encode(self.SCHEMA)[0].tolist()
         self.TOOL_CALL_TOKEN = 151657
         self.EOT_TOKEN = 151643
@@ -44,7 +41,7 @@ class ConstrainedDecoding:
             nbrs.add(self.llm.encode(i)[0].tolist()[0])
         return (nbrs)
 
-    def _choose_constrained_token(self, logits, allowed):
+    def _choose_constrained_token(self, logits: List[float], allowed: Set):
         logits_np = np.asarray(logits, dtype=np.float64)
         allowed_np = np.fromiter(allowed, dtype=np.int64)
         return int(allowed_np[np.argmax(logits_np[allowed_np])])
@@ -149,13 +146,10 @@ class ConstrainedDecoding:
             self.context.append(i)
 
     def run(self, prompt: str) -> str:
+        prompt = prompt.replace("\\", "\\\\").replace('"', '\\"')
         self.context = self.llm.encode(prompt)[0].tolist()
         self.out = []
         self.prompt_tokens = list(self.context)
-        func_string = "functions:\n"
-        for f in self.func_dict:
-            func_string += f"- {f['name']} ({f['parameters']})\n"
-        self.context += self.llm.encode(func_string)[0].tolist()
         count = 0
         for i in self.SCHEMA_TOKENS:
             if (i != self.TOOL_CALL_TOKEN):
@@ -167,14 +161,12 @@ class ConstrainedDecoding:
                     self.context.append(j)
                 count += 1
             elif (count == 1):
+                self.context += self.llm.encode(
+                    "\nBased on the prompt, the correct function is:\n"
+                )[0].tolist()
                 t1 = time()
                 func_name = self._choose_func()
                 print(f"Function choosing done in {time() - t1:.3f} seconds")
-                func_context = [
-                    f for f in self.func_dict if f["name"] == func_name][0]
-                self.context += \
-                    self.llm.encode(func_name + " " +
-                                    f"\n{str(func_context)}")[0].tolist()
                 count += 1
             elif (count == 2):
                 func_context = [

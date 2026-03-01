@@ -2,6 +2,7 @@ from .constrained_decoding import ConstrainedDecoding
 import json
 from typing import Dict
 from time import time
+import os
 
 
 def exit_parsing(function_context: Dict):
@@ -51,14 +52,24 @@ with open("data/input/function_calling_tests.json") as file:
     prompts = json.load(file)
 
 
-# prompt = "What is the sum of 40 and 2?"
-prompt = "Replace all vowels in 'Programming is fun' with asterisks"
+out = []
 test = ConstrainedDecoding(data)
+t = time()
 for p in prompts:
     if (not p.get("prompt")):
         print(f"Cannot process {p}")
         continue
     print(p["prompt"])
     t1 = time()
-    print(test.run(p["prompt"]))
+    result = test.run(p["prompt"])
+    print(result)
+    out.append(json.loads(str(result)))
     print(f"Done in {time() - t1:.3f} seconds\n")
+process_time = time() - t
+print(f"\nTotal processing time: {process_time // 60:.0f}m "
+      f"{process_time % 60:.0f}s")
+
+os.makedirs("data/output", exist_ok=True)
+with open("data/output/function_calling_results.json", "w",
+          encoding="utf-8") as f:
+    json.dump(out, f, indent=4, ensure_ascii=False)
