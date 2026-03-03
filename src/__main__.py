@@ -55,7 +55,7 @@ if (__name__ == "__main__"):
         if (not p.get("prompt")):
             print(f"Cannot process {p}")
             continue
-        print(p["prompt"])
+        print("\033[38;5;177mPrompt: " + p["prompt"] + "\033[0m")
         t1 = time()
         result = test.run(p["prompt"])
         print(result)
