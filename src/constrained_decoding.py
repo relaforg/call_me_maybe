@@ -122,6 +122,10 @@ class ConstrainedDecoding:
             logits = self.llm.get_logits_from_input_ids(self.context)
             nxt = self.get_max_logits_index(logits)
             if ('"' in self.llm.decode(nxt)):
+                tmp = self.llm.decode(nxt).split("\"")[0]
+                nxt = self.llm.encode(tmp)[0].tolist()
+                self.out += nxt
+                self.context += nxt
                 break
             self.out.append(nxt)
             self.context.append(nxt)

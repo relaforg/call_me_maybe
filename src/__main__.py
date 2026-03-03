@@ -63,7 +63,11 @@ for p in prompts:
     t1 = time()
     result = test.run(p["prompt"])
     print(result)
-    out.append(json.loads(str(result)))
+    try:
+        out.append(json.loads(str(result)))
+        print("\033[32mSUCCESS: Valid JSON format\033[0m")
+    except Exception:
+        print("\033[31mFAILED: Invalid JSON format\033[0m")
     print(f"Done in {time() - t1:.3f} seconds\n")
 process_time = time() - t
 print(f"\nTotal processing time: {process_time // 60:.0f}m "
