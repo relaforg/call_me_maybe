@@ -3,6 +3,7 @@ from typing import Set, List, Dict
 from time import time
 import numpy as np
 import json
+from tqdm import tqdm
 
 
 class ConstrainedDecoding:
@@ -174,7 +175,8 @@ class ConstrainedDecoding:
                 )[0].tolist()
                 t1 = time()
                 func_name = self._choose_func()
-                print(f"Function choosing done in {time() - t1:.3f} seconds")
+                tqdm.write(
+                    f"Function choosing done in {time() - t1:.3f} seconds")
                 count += 1
             elif (count == 2):
                 func_context = [
@@ -185,7 +187,7 @@ class ConstrainedDecoding:
                     self._add_string(parameters)
                     t1 = time()
                     self._get_param(param_type)
-                    print(
+                    tqdm.write(
                         f"Get param {c + 1} done in {time() - t1:.3f} seconds")
                     if (c < len(func_context["parameters"]) - 1):
                         self._add_string(", ")

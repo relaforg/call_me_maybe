@@ -4,6 +4,19 @@ from time import time
 from .parser import Parser
 from argparse import ArgumentParser
 from pathlib import Path
+from tqdm import tqdm
+import sys
+
+
+def draw_progress(progress, total, width=40):
+    percent = progress / total
+    filled = int(width * percent)
+    bar = "█" * filled + "-" * (width - filled)
+    sys.stdout.write("\033[s")          # save cursor
+    sys.stdout.write("\033[999;0H")     # go bottom
+    sys.stdout.write(f"[{bar}] {percent*100:.1f}%")
+    sys.stdout.write("\033[u")          # restore cursor
+    sys.stdout.flush()
 
 
 def get_files_paths(args):
@@ -39,9 +52,9 @@ def export_result(file_paths) -> None:
 if (__name__ == "__main__"):
     parser = ArgumentParser()
 
-    parser.add_argument("--functions_definition", type=str)
-    parser.add_argument("--input", type=str)
-    parser.add_argument("--output", type=str)
+    parser.add_argument("-functions_definition", type=str)
+    parser.add_argument("-input", type=str)
+    parser.add_argument("-output", type=str)
     args = parser.parse_args()
     file_paths = get_files_paths(args)
 
@@ -52,21 +65,21 @@ if (__name__ == "__main__"):
     test = ConstrainedDecoding(funcs)
     t = time()
     print()
-    for p in prompts:
+    for p in tqdm(prompts, desc="Processing", leave=True):
         if (not p.get("prompt") or not isinstance(p.get("prompt"), str)):
-            print(f"\033[33mCannot process {p}\033[0m\n")
+            tqdm.write(f"\033[33mCannot process {p}\033[0m\n")
             continue
-        print("\033[38;5;177mPrompt: " + p["prompt"] + "\033[0m")
+        tqdm.write("\033[38;5;177mPrompt: " + p["prompt"] + "\033[0m")
         t1 = time()
         result = test.run(p["prompt"])
-        print(result)
+        tqdm.write(result)
         try:
             out.append(json.loads(str(result)))
-            print("\033[32mSUCCESS: Valid JSON format\033[0m")
+            tqdm.write("\033[32mSUCCESS: Valid JSON format\033[0m")
         except Exception:
-            print("\033[31mFAILED: Invalid JSON format\033[0m")
-        print(f"Done in {time() - t1:.3f} seconds\n")
+            tqdm.write("\033[31mFAILED: Invalid JSON format\033[0m")
+        tqdm.write(f"Done in {time() - t1:.3f} seconds\n")
     process_time = time() - t
-    print(f"\nTotal processing time: {process_time // 60:.0f}m "
-          f"{process_time % 60:.0f}s")
+    tqdm.write(f"\nTotal processing time: {process_time // 60:.0f}m "
+               f"{process_time % 60:.0f}s")
     export_result(file_paths)

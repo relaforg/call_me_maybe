@@ -23,7 +23,8 @@ make install
 To run the program :
 
 ```bash
-make run ARGS="<possible arguments>"
+make run ARGS="[–functions_definition <function_definition_file>] [–input <input_file>]
+[–output <output_file>]"
 ```
 
 ## Ressources
@@ -66,7 +67,7 @@ So, with simple input, the program can be considered reliable.
 ## Challenges faced
 
 I found it very dificult to understand where were the problem as the LLM act
-like a black-0box where it is impossible to know what is happening.
+like a black-box where it is impossible to know what is happening.
 But it was really intresting to discover this programming challenge.
 
 ## Testing strategy
