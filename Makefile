@@ -3,7 +3,7 @@ MYPY_FLAGS = --warn-return-any \
 			 --check-untyped-defs
 
 run:
-	@uv run python -m src
+	@uv run python -m src $(ARGS)
 
 time:
 	time uv run python -m src
