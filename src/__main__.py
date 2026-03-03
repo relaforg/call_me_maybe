@@ -2,25 +2,14 @@ from .constrained_decoding import ConstrainedDecoding
 import json
 from time import time
 from .parser import Parser
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from tqdm import tqdm
-import sys
+from typing import Dict
 
 
-def draw_progress(progress, total, width=40):
-    percent = progress / total
-    filled = int(width * percent)
-    bar = "█" * filled + "-" * (width - filled)
-    sys.stdout.write("\033[s")          # save cursor
-    sys.stdout.write("\033[999;0H")     # go bottom
-    sys.stdout.write(f"[{bar}] {percent*100:.1f}%")
-    sys.stdout.write("\033[u")          # restore cursor
-    sys.stdout.flush()
-
-
-def get_files_paths(args):
-    file_paths = {}
+def get_files_paths(args: Namespace) -> Dict[str, str]:
+    file_paths: Dict[str, str] = {}
     if (args.functions_definition):
         file_paths["definitions"] = args.functions_definition
     else:
@@ -36,7 +25,7 @@ def get_files_paths(args):
     return (file_paths)
 
 
-def export_result(file_paths) -> None:
+def export_result(file_paths: Dict[str, str]) -> None:
     output = Path(file_paths["output"])
     directory = output.parent
     directory.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,5 @@
 from llm_sdk import Small_LLM_Model
-from typing import Set, List, Dict
+from typing import Set, List, Dict, Any
 from time import time
 import numpy as np
 import json
@@ -30,37 +30,38 @@ class ConstrainedDecoding:
             for f in self.func_dict
         }
 
-    def _get_bool_allowed(self):
+    def _get_bool_allowed(self) -> Set:
         allowed = set()
         for i in ["true", "false"]:
             allowed.add(self.llm.encode(i)[0].tolist()[0])
         return (allowed)
 
-    def _get_number_allowed(self):
+    def _get_number_allowed(self) -> Set:
         nbrs = set()
         for i in "0123456789.-":
             nbrs.add(self.llm.encode(i)[0].tolist()[0])
         return (nbrs)
 
-    def _choose_constrained_token(self, logits: List[float], allowed: Set):
+    def _choose_constrained_token(self, logits: List[float],
+                                  allowed: Set) -> int:
         logits_np = np.asarray(logits, dtype=np.float64)
         allowed_np = np.fromiter(allowed, dtype=np.int64)
         return int(allowed_np[np.argmax(logits_np[allowed_np])])
 
-    def _logsumexp(self, xs) -> float:
+    def _logsumexp(self, xs: List[float]) -> float:
         x = np.asarray(xs, dtype=np.float64)
         m = x.max()
         return float(m + np.log(np.exp(x - m).sum()))
 
-    def _compute_avg_logprob(self, prob_list):
+    def _compute_avg_logprob(self, prob_list: List[float]) -> float:
         if (len(prob_list) == 0):
             return (0)
-        sum = 0
+        sum: float = 0
         for i in prob_list:
             sum += i
         return (sum / len(prob_list))
 
-    def _choose_func(self):
+    def _choose_func(self) -> str:
         best_name = ""
         best_prob = float("-inf")
 
@@ -93,11 +94,11 @@ class ConstrainedDecoding:
                 return (True)
         return (False)
 
-    def _get_number_param(self):
+    def _get_number_param(self) -> None:
         allowed = self.NUMBER_ALLOWED & set(self.prompt_tokens)
         if (not len(allowed)):
             allowed = set(self.prompt_tokens)
-        param_tokens = []
+        param_tokens: List[int] = []
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
             nxt = self._choose_constrained_token(logits, allowed)
@@ -108,46 +109,46 @@ class ConstrainedDecoding:
             self.context.append(nxt)
             param_tokens.append(nxt)
 
-    def get_max_logits_index(self, logits):
+    def _get_max_logits_index(self, logits: List[float]) -> int:
         max_i = 0
         for i, v in enumerate(logits):
             if logits[max_i] < v:
                 max_i = i
         return (max_i)
 
-    def _get_string_param(self):
+    def _get_string_param(self) -> None:
         self.context.append(self.QUOTE_TOKEN)
         self.out.append(self.QUOTE_TOKEN)
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
-            nxt = self.get_max_logits_index(logits)
+            nxt = self._get_max_logits_index(logits)
             if ('"' in self.llm.decode(nxt)):
                 tmp = self.llm.decode(nxt).split("\"")[0]
-                nxt = self.llm.encode(tmp)[0].tolist()
-                self.out += nxt
-                self.context += nxt
+                tmp2 = self.llm.encode(tmp)[0].tolist()
+                self.out += tmp2
+                self.context += tmp2
                 break
             self.out.append(nxt)
             self.context.append(nxt)
         self.context.append(self.QUOTE_TOKEN)
         self.out.append(self.QUOTE_TOKEN)
 
-    def _get_bool_param(self):
+    def _get_bool_param(self) -> None:
         logits = self.llm.get_logits_from_input_ids(self.context)
         nxt = self._choose_constrained_token(logits, self.BOOL_ALLOWED)
         self.out.append(nxt)
         self.context.append(nxt)
 
-    def _get_param(self, param_type):
+    def _get_param(self, param_type: Dict[str, Any]) -> None:
         match param_type["type"]:
             case "number":
-                return self._get_number_param()
+                self._get_number_param()
             case "bool" | "boolean":
-                return self._get_bool_param()
+                self._get_bool_param()
             case "string" | _:
-                return self._get_string_param()
+                self._get_string_param()
 
-    def _add_string(self, s: str):
+    def _add_string(self, s: str) -> None:
         token_list = self.llm.encode(s)[0].tolist()
         for i in token_list:
             self.out.append(i)

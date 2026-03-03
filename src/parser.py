@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, NoReturn, Any, Tuple, List
 import json
 
 
@@ -7,7 +7,7 @@ class Parser:
         self.functions_defs_path = functions_defs_path
         self.prompt_path = prompt_path
 
-    def exit_parsing(self, function_context: Dict):
+    def exit_parsing(self, function_context: Dict) -> NoReturn:
         print("Function definition is incorect\n" + str(function_context))
         exit(1)
 
@@ -26,10 +26,10 @@ class Parser:
                 return (1)
         return (0)
 
-    def extract_functions(self):
+    def extract_functions(self) -> List[Dict[str, Any]]:
         try:
             with open(self.functions_defs_path, "r") as file:
-                data = json.load(file)
+                data: List[Dict[str, Any]] = json.load(file)
         except FileNotFoundError:
             print(f"{self.functions_defs_path} file not found")
             exit()
@@ -56,10 +56,10 @@ class Parser:
                 self.exit_parsing(f)
         return (data)
 
-    def extract_prompt(self):
+    def extract_prompt(self) -> List[Dict[str, Any]]:
         try:
             with open(self.prompt_path, "r") as file:
-                prompts = json.load(file)
+                prompts: List[Dict[str, Any]] = json.load(file)
         except FileNotFoundError:
             print(f"{self.prompt_path} file not found")
             exit()
@@ -68,5 +68,5 @@ class Parser:
             exit()
         return (prompts)
 
-    def run(self):
+    def run(self) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         return (self.extract_functions(), self.extract_prompt())

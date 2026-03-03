@@ -3,24 +3,17 @@ MYPY_FLAGS = --warn-return-any \
 			 --check-untyped-defs
 
 run:
-	@uv run python -m src $(ARGS)
-
-time:
-	time uv run python -m src
+	uv run python -m src $(ARGS)
 
 install:
-	@uv pip install -r requirements.txt
+	uv pip install -r requirements.txt
 
 debug:
-	@uv run python -m pdb -m src
+	uv run python -m pdb -m src
 
 clean:
 	rm -fdr  __pycache__ .mypy_cache
 
 lint:
-	@uv run python -m flake8 src
-	@uv run python -m mypy src $(MYPY_FLAGS)
-
-lint-strict:
-	@uv run python -m flake8 src
-	@uv run python -m mypy src --strict
+	uv run python -m flake8 src
+	uv run python -m mypy src $(MYPY_FLAGS)
