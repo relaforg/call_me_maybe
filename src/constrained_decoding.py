@@ -21,10 +21,9 @@ class ConstrainedDecoding:
 \t"name": "<tool_call>",
 \t"parameters": {<tool_call>}
 }
-<|endoftext|>"""
+"""
         self.SCHEMA_TOKENS = self.llm.encode(self.SCHEMA)[0].tolist()
         self.TOOL_CALL_TOKEN = 151657
-        self.EOT_TOKEN = 151643
         self._func_name_tokens: dict[str, list[int]] = {
             f["name"]: self.llm.encode(f["name"])[0].tolist()
             for f in self.func_dict
@@ -191,7 +190,5 @@ class ConstrainedDecoding:
                     if (c < len(func_context["parameters"]) - 1):
                         self._add_string(", ")
                 count += 1
-            if (i == self.EOT_TOKEN):
-                break
         result = self.llm.decode(self.out)
         return (result)
