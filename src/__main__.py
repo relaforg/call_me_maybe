@@ -51,9 +51,10 @@ if (__name__ == "__main__"):
     out = []
     test = ConstrainedDecoding(funcs)
     t = time()
+    print()
     for p in prompts:
-        if (not p.get("prompt")):
-            print(f"Cannot process {p}")
+        if (not p.get("prompt") or not isinstance(p.get("prompt"), str)):
+            print(f"\033[33mCannot process {p}\033[0m\n")
             continue
         print("\033[38;5;177mPrompt: " + p["prompt"] + "\033[0m")
         t1 = time()
