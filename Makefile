@@ -6,7 +6,7 @@ run:
 	uv run python -m src $(ARGS)
 
 install:
-	uv pip install -r requirements.txt
+	uv sync
 
 debug:
 	uv run python -m pdb -m src
