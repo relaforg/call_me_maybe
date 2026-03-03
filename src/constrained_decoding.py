@@ -108,20 +108,23 @@ class ConstrainedDecoding:
             self.context.append(nxt)
             param_tokens.append(nxt)
 
+    def get_max_logits_index(self, logits):
+        max_i = 0
+        for i, v in enumerate(logits):
+            if logits[max_i] < v:
+                max_i = i
+        return (max_i)
+
     def _get_string_param(self):
-        param_tokens = []
         self.context.append(self.QUOTE_TOKEN)
         self.out.append(self.QUOTE_TOKEN)
-        allowed = set(self.prompt_tokens)
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
-            nxt = self._choose_constrained_token(logits, allowed)
-            if not self._is_subsequence(param_tokens
-                                        + [nxt], self.prompt_tokens):
+            nxt = self.get_max_logits_index(logits)
+            if ('"' in self.llm.decode(nxt)):
                 break
             self.out.append(nxt)
             self.context.append(nxt)
-            param_tokens.append(nxt)
         self.context.append(self.QUOTE_TOKEN)
         self.out.append(self.QUOTE_TOKEN)
 
@@ -150,6 +153,7 @@ class ConstrainedDecoding:
         prompt = json.dumps(prompt)[1:-1]
         self.context = self.llm.encode(prompt)[0].tolist()
         self.out = []
+        self.prompt_tokens = []
         self.prompt_tokens = list(self.context)
         count = 0
         for i in self.SCHEMA_TOKENS:
