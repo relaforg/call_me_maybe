@@ -4,6 +4,7 @@ from time import time
 import numpy as np
 import json
 from tqdm import tqdm
+from pydantic import BaseModel, Field
 
 
 class ConstrainedDecoding:
