@@ -1,5 +1,5 @@
 from llm_sdk import Small_LLM_Model
-from typing import Set, List, Dict, Any
+from typing import Set, List, Dict, Any, Callable
 from time import time
 import numpy as np
 import json
@@ -17,7 +17,8 @@ class ConstrainedDecoding:
         self.out: List[int] = []
         self.context: List[int] = []
         self.prompt_tokens: List[int] = []
-        self.NUMBER_ALLOWED = self._get_number_allowed()
+        self.FLOAT_ALLOWED = self._get_float_allowed()
+        self.INT_ALLOWED = self._get_int_allowed()
         self.QUOTE_TOKEN = self.llm.encode("\"")[0].tolist()[0]
         self.BOOL_ALLOWED = self._get_bool_allowed()
         self.SCHEMA = """
@@ -40,9 +41,15 @@ class ConstrainedDecoding:
             allowed.add(self.llm.encode(i)[0].tolist()[0])
         return (allowed)
 
-    def _get_number_allowed(self) -> Set:
+    def _get_float_allowed(self) -> Set:
         nbrs = set()
         for i in "0123456789.-":
+            nbrs.add(self.llm.encode(i)[0].tolist()[0])
+        return (nbrs)
+
+    def _get_int_allowed(self) -> Set:
+        nbrs = set()
+        for i in "0123456789-":
             nbrs.add(self.llm.encode(i)[0].tolist()[0])
         return (nbrs)
 
@@ -98,20 +105,19 @@ class ConstrainedDecoding:
                 return (True)
         return (False)
 
-    def _get_number_param(self) -> None:
-        allowed = self.NUMBER_ALLOWED & set(self.prompt_tokens)
-        if (not len(allowed)):
-            allowed = set(self.prompt_tokens)
-        param_tokens: List[int] = []
+    def _get_number_param(self, cast: Callable) -> None:
+        buf = ""
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
-            nxt = self._choose_constrained_token(logits, allowed)
-            if not self._is_subsequence(param_tokens
-                                        + [nxt], self.prompt_tokens):
-                break
+            nxt = self._get_max_logits_index(logits)
+            try:
+                cast(buf + self.llm.decode([nxt]))
+            except ValueError:
+                if (len(buf) != 0 or self.llm.decode([nxt]) != "-"):
+                    break
             self.out.append(nxt)
             self.context.append(nxt)
-            param_tokens.append(nxt)
+            buf += self.llm.decode([nxt])
 
     def _get_max_logits_index(self, logits: List[float]) -> int:
         max_i = 0
@@ -145,8 +151,10 @@ class ConstrainedDecoding:
 
     def _get_param(self, param_type: Dict[str, Any]) -> None:
         match param_type["type"]:
-            case "number":
-                self._get_number_param()
+            case "number" | "float":
+                self._get_number_param(float)
+            case "int" | "integer":
+                self._get_number_param(int)
             case "bool" | "boolean":
                 self._get_bool_param()
             case "string" | _:

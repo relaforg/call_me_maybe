@@ -50,8 +50,8 @@ class Validate(BaseModel):
             return (1)
         if (not isinstance(param["type"], str)):
             return (1)
-        if (param["type"] not in ["number", "string", "bool", "boolean"]):
-            return (1)
+        # if (param["type"] not in ["number", "string", "bool", "boolean"]):
+        #     return (1)
         return (0)
 
     def validate_parameters(self, params: Dict) -> int:
