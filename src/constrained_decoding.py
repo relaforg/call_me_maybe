@@ -7,8 +7,12 @@ from tqdm import tqdm
 
 
 class ConstrainedDecoding:
-    def __init__(self, func_dict: List[Dict]) -> None:
-        self.llm = Small_LLM_Model()
+    def __init__(self, func_dict: List[Dict], llm: str) -> None:
+        try:
+            self.llm = Small_LLM_Model(llm)
+        except OSError:
+            print(f"\n\33[31m[ERROR]: {llm} llm not found\33[0m\n")
+            exit()
         self.func_dict = func_dict
         self.out: List[int] = []
         self.context: List[int] = []
@@ -177,7 +181,8 @@ class ConstrainedDecoding:
                 t1 = time()
                 func_name = self._choose_func()
                 tqdm.write(
-                    f"Function choosing done in {time() - t1:.3f} seconds")
+                    "[STATUS]: Function choosing done in"
+                    f"{time() - t1: .3f} seconds")
                 count += 1
             elif (count == 2):
                 func_context = [
@@ -189,7 +194,8 @@ class ConstrainedDecoding:
                     t1 = time()
                     self._get_param(param_type)
                     tqdm.write(
-                        f"Get param {c + 1} done in {time() - t1:.3f} seconds")
+                        f"[STATUS]: Get param {c + 1} done in "
+                        f"{time() - t1:.3f} seconds")
                     if (c < len(func_context["parameters"]) - 1):
                         self._add_string(", ")
                 count += 1
