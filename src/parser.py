@@ -1,4 +1,4 @@
-from typing import Dict, NoReturn, Any, Tuple, List
+from typing import Dict, NoReturn, Any, List
 import json
 from pydantic import BaseModel, Field, model_validator
 
@@ -15,10 +15,10 @@ class Validate(BaseModel):
     def validate_defs(self):
         for f in self.function_defs:
             if (
-                not f.get("name") or
-                not f.get("description") or
-                not f.get("parameters") or
-                not f.get("returns")
+                "name" not in f or
+                "description" not in f or
+                "parameters" not in f or
+                "returns" not in f
             ):
                 self.exit_parsing(f)
             if (
