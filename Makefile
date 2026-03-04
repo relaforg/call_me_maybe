@@ -13,7 +13,8 @@ debug:
 	uv run python -m pdb -m src
 
 clean:
-	rm -fdr  __pycache__ .mypy_cache
+	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
+	rm -rf .mypy_cache
 
 lint:
 	uv run python -m flake8 $(SRC_DIRECTORY)
