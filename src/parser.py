@@ -1,6 +1,6 @@
 from typing import Dict, NoReturn, Any, List
 import json
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, ValidationError
 
 
 class Validate(BaseModel):
@@ -91,7 +91,11 @@ class Parser:
         return (prompts)
 
     def run(self) -> Validate:
-        return (Validate(
-            function_defs=self.extract_functions(),
-            prompts=self.extract_prompt()
-        ))
+        try:
+            return (Validate(
+                function_defs=self.extract_functions(),
+                prompts=self.extract_prompt()
+            ))
+        except ValidationError:
+            print(f"{self.functions_defs_path} is not a list of function")
+            exit()
