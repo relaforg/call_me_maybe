@@ -11,7 +11,11 @@ class Validate(BaseModel):
     @model_validator(mode="after")
     def _validate_all(self) -> Self:
         self.validate_defs()
+        self.validate_prompts()
         return (self)
+
+    def validate_prompts(self):
+        pass
 
     def validate_defs(self) -> None:
         if (not len(self.function_defs)):
@@ -82,7 +86,11 @@ class Parser:
     def extract_prompt(self) -> List[Dict[str, Any]]:
         try:
             with open(self.prompt_path, "r") as file:
-                prompts: List[Dict[str, Any]] = json.load(file)
+                try:
+                    prompts: List[Dict[str, Any]] = json.load(file)
+                except Exception:
+                    print(f"{self.prompt_path} is not a valid JSON")
+                    exit()
         except FileNotFoundError:
             print(f"{self.prompt_path} file not found")
             exit()
@@ -97,6 +105,7 @@ class Parser:
                 function_defs=self.extract_functions(),
                 prompts=self.extract_prompt()
             ))
-        except ValidationError:
-            print(f"{self.functions_defs_path} is not a list of function")
+        except ValidationError as e:
+            print(e.errors()[0]["msg"])
+            # print(f"{self.functions_defs_path} is not a list of function")
             exit()
