@@ -13,6 +13,9 @@ class ConstrainedDecoding:
         except OSError:
             print(f"\n\33[31m[ERROR]: {llm} llm not found\33[0m\n")
             exit()
+        self.encode = self._legacy_encode_wrapper
+        self.decode = self.llm.decode
+        self._get_tokenize_function()
         self.func_dict = func_dict
         self.out: List[int] = []
         self.context: List[int] = []
@@ -35,22 +38,66 @@ class ConstrainedDecoding:
             for f in self.func_dict
         }
 
+    def _legacy_encode_wrapper(self, text: str) -> List[int]:
+        return (self.llm.encode(text)[0].tolist())
+
+    def _get_tokenize_function(self):
+        try:
+            with open(self.llm.get_path_to_vocab_file(), "r") as f:
+                self.encode_dict = json.load(f)
+            self.decode_dict = {v: k for k, v in self.encode_dict.items()}
+            self.SPACE_CHAR = self.decode_dict[self._legacy_encode_wrapper(
+                " ")[0]]
+            self.TAB_CHAR = self.decode_dict[self._legacy_encode_wrapper("\t")[
+                0]]
+            self.NEWLINE_CHAR = self.decode_dict[self._legacy_encode_wrapper(
+                "\n")[0]]
+            self.max_token_len = len(max(self.encode_dict, key=len))
+            self.encode = self._vocab_encode
+            self.decode = self._vocab_decode
+        except (FileNotFoundError, PermissionError):
+            print("\n\33[33m[WARN]: Cannot load vocabulary file\33[0m")
+            print("[STATUS]: Switching to legacy tokenization fonctions\n")
+            return
+
+    def _vocab_decode(self, tokens: List[int]):
+        buf = ""
+        for token in tokens:
+            buf += self.decode_dict[token]
+        buf = buf.translate(str.maketrans(self.SPACE_CHAR +
+                                          self.TAB_CHAR + self.NEWLINE_CHAR,
+                                          " \t\n"))
+        return (buf)
+
+    def _vocab_encode(self, text: str) -> List[int]:
+        out: List[int] = []
+
+        text = text.translate(str.maketrans(" \t\n", self.SPACE_CHAR +
+                                            self.TAB_CHAR + self.NEWLINE_CHAR))
+        while (len(text)):
+            i = min(self.max_token_len, len(text))
+            while (i > 0 and text[:i] not in self.encode_dict):
+                i -= 1
+            out.append(self.encode_dict[text[:i]])
+            text = text[i:]
+        return (out)
+
     def _get_bool_allowed(self) -> Set:
         allowed = set()
         for i in ["true", "false"]:
-            allowed.add(self.llm.encode(i)[0].tolist()[0])
+            allowed.add(self.encode(i)[0])
         return (allowed)
 
     def _get_float_allowed(self) -> Set:
         nbrs = set()
         for i in "0123456789.-":
-            nbrs.add(self.llm.encode(i)[0].tolist()[0])
+            nbrs.add(self.encode(i)[0])
         return (nbrs)
 
     def _get_int_allowed(self) -> Set:
         nbrs = set()
         for i in "0123456789-":
-            nbrs.add(self.llm.encode(i)[0].tolist()[0])
+            nbrs.add(self.encode(i)[0])
         return (nbrs)
 
     def _choose_constrained_token(self, logits: List[float],
@@ -93,7 +140,7 @@ class ConstrainedDecoding:
             if (avg_prob > best_prob):
                 best_prob = avg_prob
                 best_name = name
-        self.out += self.llm.encode(best_name)[0].tolist()
+        self.out += self.encode(best_name)
         return (best_name)
 
     def _is_subsequence(self, sub: list[int], seq: list[int]) -> bool:
@@ -111,13 +158,13 @@ class ConstrainedDecoding:
             logits = self.llm.get_logits_from_input_ids(self.context)
             nxt = self._get_max_logits_index(logits)
             try:
-                cast(buf + self.llm.decode([nxt]))
+                cast(buf + self.decode([nxt]))
             except ValueError:
-                if (len(buf) != 0 or self.llm.decode([nxt]) != "-"):
+                if (len(buf) != 0 or self.decode([nxt]) != "-"):
                     break
             self.out.append(nxt)
             self.context.append(nxt)
-            buf += self.llm.decode([nxt])
+            buf += self.decode([nxt])
 
     def _get_max_logits_index(self, logits: List[float]) -> int:
         max_i = 0
@@ -132,9 +179,9 @@ class ConstrainedDecoding:
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
             nxt = self._get_max_logits_index(logits)
-            if ('"' in self.llm.decode([nxt])):
-                tmp = self.llm.decode([nxt]).split("\"")[0]
-                tmp2 = self.llm.encode(tmp)[0].tolist()
+            if ('"' in self.decode([nxt])):
+                tmp = self.decode([nxt]).split("\"")[0]
+                tmp2 = self.encode(tmp)
                 self.out += tmp2
                 self.context += tmp2
                 break
@@ -161,14 +208,14 @@ class ConstrainedDecoding:
                 self._get_string_param()
 
     def _add_string(self, s: str) -> None:
-        token_list = self.llm.encode(s)[0].tolist()
+        token_list = self.encode(s)
         for i in token_list:
             self.out.append(i)
             self.context.append(i)
 
     def run(self, prompt: str) -> str:
         prompt = json.dumps(prompt)[1:-1]
-        self.context = self.llm.encode(prompt)[0].tolist()
+        self.context = self.encode(prompt)
         self.out = []
         self.prompt_tokens = []
         self.prompt_tokens = list(self.context)
@@ -183,9 +230,9 @@ class ConstrainedDecoding:
                     self.context.append(j)
                 count += 1
             elif (count == 1):
-                self.context += self.llm.encode(
+                self.context += self.encode(
                     "\nBased on the prompt, the correct function is:\n"
-                )[0].tolist()
+                )
                 t1 = time()
                 func_name = self._choose_func()
                 tqdm.write(
@@ -207,5 +254,5 @@ class ConstrainedDecoding:
                     if (c < len(func_context["parameters"]) - 1):
                         self._add_string(", ")
                 count += 1
-        result = self.llm.decode(self.out)
+        result = self.decode(self.out)
         return (result)
