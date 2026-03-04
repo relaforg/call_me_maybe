@@ -13,6 +13,9 @@ class Validate(BaseModel):
         return (self)
 
     def validate_defs(self):
+        if (not len(self.function_defs)):
+            print("The function list is empty")
+            exit()
         for f in self.function_defs:
             if (
                 "name" not in f or
