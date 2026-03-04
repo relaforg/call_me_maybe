@@ -19,3 +19,5 @@ clean:
 lint:
 	uv run python -m flake8 $(SRC_DIRECTORY)
 	uv run python -m mypy $(MYPY_FLAGS)
+
+.PHONY: run install debug clean lint
