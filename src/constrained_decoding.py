@@ -4,7 +4,6 @@ from time import time
 import numpy as np
 import json
 from tqdm import tqdm
-from pydantic import BaseModel, Field
 
 
 class ConstrainedDecoding:
@@ -123,8 +122,8 @@ class ConstrainedDecoding:
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
             nxt = self._get_max_logits_index(logits)
-            if ('"' in self.llm.decode(nxt)):
-                tmp = self.llm.decode(nxt).split("\"")[0]
+            if ('"' in self.llm.decode([nxt])):
+                tmp = self.llm.decode([nxt]).split("\"")[0]
                 tmp2 = self.llm.encode(tmp)[0].tolist()
                 self.out += tmp2
                 self.context += tmp2

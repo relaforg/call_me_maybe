@@ -3,7 +3,16 @@ name = "call_me_maybe"
 version = "1.0.0"
 requires-python = ">=3.10"
 dependencies = [
+    "flake8>=7.3.0",
+    "mypy>=1.19.1",
     "pydantic>=2.12.5",
     "torch>=2.10.0",
     "transformers>=5.2.0",
 ]
+
+[tool.mypy]
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["llm_sdk", "llm_sdk.*"]
+ignore_errors = true

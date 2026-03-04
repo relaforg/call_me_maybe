@@ -47,8 +47,8 @@ if (__name__ == "__main__"):
     args = parser.parse_args()
     file_paths = get_files_paths(args)
 
-    parser = Parser(file_paths["definitions"], file_paths["input"]).run()
-    funcs, prompts = parser.function_defs, parser.prompts
+    data = Parser(file_paths["definitions"], file_paths["input"]).run()
+    funcs, prompts = data.function_defs, data.prompts
 
     out = []
     test = ConstrainedDecoding(funcs)

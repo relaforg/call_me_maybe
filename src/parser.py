@@ -1,4 +1,5 @@
 from typing import Dict, NoReturn, Any, List
+from typing_extensions import Self
 import json
 from pydantic import BaseModel, Field, model_validator, ValidationError
 
@@ -8,11 +9,11 @@ class Validate(BaseModel):
     prompts: List[Dict[str, Any]] = Field(...)
 
     @model_validator(mode="after")
-    def validate(self):
+    def _validate_all(self) -> Self:
         self.validate_defs()
         return (self)
 
-    def validate_defs(self):
+    def validate_defs(self) -> None:
         if (not len(self.function_defs)):
             print("The function list is empty")
             exit()

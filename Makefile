@@ -1,6 +1,7 @@
-MYPY_FLAGS = --warn-return-any \
+MYPY_FLAGS := --warn-return-any \
 			 --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs \
 			 --check-untyped-defs
+SRC_DIRECTORY := src
 
 run:
 	uv run python -m src $(ARGS)
@@ -15,5 +16,5 @@ clean:
 	rm -fdr  __pycache__ .mypy_cache
 
 lint:
-	uv run python -m flake8 src
-	uv run python -m mypy src $(MYPY_FLAGS)
+	uv run python -m flake8 $(SRC_DIRECTORY)
+	uv run python -m mypy $(MYPY_FLAGS)
