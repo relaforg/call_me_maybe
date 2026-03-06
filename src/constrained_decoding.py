@@ -1,5 +1,5 @@
 from llm_sdk import Small_LLM_Model
-from typing import Set, List, Dict, Any, Callable
+from typing import Set, List, Dict, Any, Callable, Optional
 from time import time
 import numpy as np
 import json
@@ -15,6 +15,7 @@ class ConstrainedDecoding:
             exit()
         self.encode = self._legacy_encode_wrapper
         self.decode = self.llm.decode
+        self.TOOL_CALL_TOKEN = 151657
         self._get_tokenize_function()
         self.func_dict = func_dict
         self.out: List[int] = []
@@ -22,7 +23,7 @@ class ConstrainedDecoding:
         self.prompt_tokens: List[int] = []
         self.FLOAT_ALLOWED = self._get_float_allowed()
         self.INT_ALLOWED = self._get_int_allowed()
-        self.QUOTE_TOKEN = self.llm.encode("\"")[0].tolist()[0]
+        self.QUOTE_TOKEN = self.encode("\"")[0]
         self.BOOL_ALLOWED = self._get_bool_allowed()
         self.SCHEMA = """
 {
@@ -31,12 +32,16 @@ class ConstrainedDecoding:
 \t"parameters": {<tool_call>}
 }
 """
-        self.SCHEMA_TOKENS = self.llm.encode(self.SCHEMA)[0].tolist()
-        self.TOOL_CALL_TOKEN = 151657
+        self.SCHEMA_TOKENS = self.encode(self.SCHEMA)
         self._func_name_tokens: dict[str, list[int]] = {
-            f["name"]: self.llm.encode(f["name"])[0].tolist()
+            f["name"]: self.encode(f["name"])
             for f in self.func_dict
         }
+        tmp = self.encode("\n")
+        self.func_context = self.encode("Function list:\n")
+        for i in self._func_name_tokens.values():
+            self.func_context += i
+            self.func_context += tmp
 
     def _legacy_encode_wrapper(self, text: str) -> List[int]:
         return (self.llm.encode(text)[0].tolist())
@@ -45,6 +50,7 @@ class ConstrainedDecoding:
         try:
             with open(self.llm.get_path_to_vocab_file(), "r") as f:
                 self.encode_dict = json.load(f)
+            self.encode_dict["<tool_call>"] = self.TOOL_CALL_TOKEN
             self.decode_dict = {v: k for k, v in self.encode_dict.items()}
             self.SPACE_CHAR = self.decode_dict[self._legacy_encode_wrapper(
                 " ")[0]]
@@ -55,6 +61,7 @@ class ConstrainedDecoding:
             self.max_token_len = len(max(self.encode_dict, key=len))
             self.encode = self._vocab_encode
             self.decode = self._vocab_decode
+            print("\n[STATUS]: Switching to custom tokenization fonctions")
         except (FileNotFoundError, PermissionError):
             print("\n\33[33m[WARN]: Cannot load vocabulary file\33[0m")
             print("[STATUS]: Switching to legacy tokenization fonctions\n")
@@ -70,17 +77,25 @@ class ConstrainedDecoding:
         return (buf)
 
     def _vocab_encode(self, text: str) -> List[int]:
-        out: List[int] = []
-
         text = text.translate(str.maketrans(" \t\n", self.SPACE_CHAR +
                                             self.TAB_CHAR + self.NEWLINE_CHAR))
-        while (len(text)):
-            i = min(self.max_token_len, len(text))
-            while (i > 0 and text[:i] not in self.encode_dict):
-                i -= 1
-            out.append(self.encode_dict[text[:i]])
-            text = text[i:]
-        return (out)
+        out: List[int] = []
+        dp = [float("inf")] * (len(text) + 1)
+        dp[0] = 0
+        back = [0] * (len(text) + 1)
+        for i in range(0, len(dp)):
+            if dp[i] == float("inf"):
+                continue
+            for j in range(i + 1, len(dp)):
+                if (text[i:j] in self.encode_dict):
+                    if (dp[i] + 1 < dp[j]):
+                        dp[j] = dp[i] + 1
+                        back[j] = i
+        i = len(text)
+        while (i != 0):
+            out.append(self.encode_dict[text[back[i]:i]])
+            i = back[i]
+        return (out[::-1])
 
     def _get_bool_allowed(self) -> Set:
         allowed = set()
@@ -219,6 +234,7 @@ class ConstrainedDecoding:
         self.out = []
         self.prompt_tokens = []
         self.prompt_tokens = list(self.context)
+        self.context += self.func_context
         count = 0
         for i in self.SCHEMA_TOKENS:
             if (i != self.TOOL_CALL_TOKEN):
