@@ -24,7 +24,7 @@ To run the program :
 
 ```bash
 make run ARGS="[–functions_definition <function_definition_file>] [–input <input_file>]
-[–output <output_file>]"
+[–output <output_file>] [-llm <llm_name>]"
 ```
 
 ## Ressources
@@ -57,6 +57,14 @@ for each function, I feed the LLM with the function name and calculate the
 average probality with which the LLM would have choosen that function name.
 Thus, the chosen function is the one that was most likely to have been selected
 directly by the LLM.
+To choose function parameters:
+
+- String (default):
+  Let the llm generate until a '"' char
+- Number:
+  Let the llm generate until it is no longer a valid integer or float
+- Boolean:
+  Make the llm choose between the true and false option, take the most probable
 
 ## Performance analysis
 
@@ -78,5 +86,6 @@ cases described in the subject (big numbers, ambiguous prompts, ...).
 ## Example usage
 
 ```bash
-make run ARGS="--input input.json --output output.json --functions_definition func_defs.json"
+make run ARGS="--input input.json --output output.json --functions_definition func_defs.json
+--llm Qwen/Qwen3-1.7B"
 ```

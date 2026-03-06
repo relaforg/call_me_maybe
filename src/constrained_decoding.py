@@ -22,8 +22,6 @@ class ConstrainedDecoding:
         self.out: List[int] = []
         self.context: List[int] = []
         self.prompt_tokens: List[int] = []
-        self.FLOAT_ALLOWED = self._get_float_allowed()
-        self.INT_ALLOWED = self._get_int_allowed()
         self.QUOTE_TOKEN = self.encode("\"")[0]
         self.BOOL_ALLOWED = self._get_bool_allowed()
         self.SCHEMA = """
@@ -108,20 +106,6 @@ class ConstrainedDecoding:
         for i in ["true", "false"]:
             allowed.add(self.encode(i)[0])
         return (allowed)
-
-    def _get_float_allowed(self) -> Set:
-        """Get float token"""
-        nbrs = set()
-        for i in "0123456789.-":
-            nbrs.add(self.encode(i)[0])
-        return (nbrs)
-
-    def _get_int_allowed(self) -> Set:
-        """Get int token"""
-        nbrs = set()
-        for i in "0123456789-":
-            nbrs.add(self.encode(i)[0])
-        return (nbrs)
 
     def _choose_constrained_token(self, logits: List[float],
                                   allowed: Set) -> int:
