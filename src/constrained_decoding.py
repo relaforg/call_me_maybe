@@ -36,11 +36,6 @@ class ConstrainedDecoding:
             f["name"]: self.encode(f["name"])
             for f in self.func_dict
         }
-        tmp = self.encode("\n")
-        self.func_context = self.encode("Function list:\n")
-        for i in self._func_name_tokens.values():
-            self.func_context += i
-            self.func_context += tmp
 
     def _legacy_encode_wrapper(self, text: str) -> List[int]:
         """Wrapper to extract a list from legacy encode function"""
