@@ -234,7 +234,6 @@ class ConstrainedDecoding:
         self.out = []
         self.prompt_tokens = []
         self.prompt_tokens = list(self.context)
-        self.context += self.func_context
         count = 0
         for i in self.SCHEMA_TOKENS:
             if (i != self.TOOL_CALL_TOKEN):
