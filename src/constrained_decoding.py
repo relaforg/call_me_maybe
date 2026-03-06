@@ -139,16 +139,14 @@ class ConstrainedDecoding:
         best_prob = float("-inf")
 
         root_logits = self.llm.get_logits_from_input_ids(self.context)
-        lse_root = self._logsumexp(root_logits)
         for name, tokens in self._func_name_tokens.items():
-            logprob_list = [float(root_logits[tokens[0]]) - lse_root]
+            logprob_list = [float(root_logits[tokens[0]])]
 
             if len(tokens) > 1:
                 tmp_tokens = list(self.context) + [tokens[0]]
                 for t in tokens[1:]:
                     logits = self.llm.get_logits_from_input_ids(tmp_tokens)
-                    logprob_list.append(
-                        float(logits[t]) - self._logsumexp(logits))
+                    logprob_list.append(float(logits[t]))
                     tmp_tokens.append(t)
 
             avg_prob = self._compute_avg_logprob(logprob_list)
@@ -157,15 +155,6 @@ class ConstrainedDecoding:
                 best_name = name
         self.out += self.encode(best_name)
         return (best_name)
-
-    def _is_subsequence(self, sub: list[int], seq: list[int]) -> bool:
-        n, m = len(sub), len(seq)
-        if n == 0:
-            return (True)
-        for i in range(m - n + 1):
-            if seq[i:i+n] == sub:
-                return (True)
-        return (False)
 
     def _get_number_param(self, cast: Callable) -> None:
         buf = ""
