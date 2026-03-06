@@ -45,9 +45,11 @@ class ConstrainedDecoding:
             self.func_context += tmp
 
     def _legacy_encode_wrapper(self, text: str) -> List[int]:
+        """Wrapper to extract a list from legacy encode function"""
         return (self.llm.encode(text)[0].tolist())
 
     def _get_tokenize_function(self) -> None:
+        """Replace legacy by custom ones if possible"""
         try:
             with open(self.llm.get_path_to_vocab_file(), "r") as f:
                 self.encode_dict = json.load(f)
@@ -69,6 +71,7 @@ class ConstrainedDecoding:
             return
 
     def _vocab_decode(self, tokens: Tensor | List[int]) -> str:
+        """Custom decode function"""
         buf = ""
         for token in tokens:
             buf += self.decode_dict[token]
@@ -78,6 +81,7 @@ class ConstrainedDecoding:
         return (buf)
 
     def _vocab_encode(self, text: str) -> List[int]:
+        """Custom encode function"""
         text = text.translate(str.maketrans(" \t\n", self.SPACE_CHAR +
                                             self.TAB_CHAR + self.NEWLINE_CHAR))
         out: List[int] = []
@@ -99,18 +103,21 @@ class ConstrainedDecoding:
         return (out[::-1])
 
     def _get_bool_allowed(self) -> Set:
+        """Get bool token"""
         allowed = set()
         for i in ["true", "false"]:
             allowed.add(self.encode(i)[0])
         return (allowed)
 
     def _get_float_allowed(self) -> Set:
+        """Get float token"""
         nbrs = set()
         for i in "0123456789.-":
             nbrs.add(self.encode(i)[0])
         return (nbrs)
 
     def _get_int_allowed(self) -> Set:
+        """Get int token"""
         nbrs = set()
         for i in "0123456789-":
             nbrs.add(self.encode(i)[0])
@@ -118,16 +125,19 @@ class ConstrainedDecoding:
 
     def _choose_constrained_token(self, logits: List[float],
                                   allowed: Set) -> int:
+        """Choose the highest probable token from allowed"""
         logits_np = np.asarray(logits, dtype=np.float64)
         allowed_np = np.fromiter(allowed, dtype=np.int64)
         return int(allowed_np[np.argmax(logits_np[allowed_np])])
 
     def _logsumexp(self, xs: List[float]) -> float:
+        """Calculate the log of the sum of the exponantial of the xs list"""
         x = np.asarray(xs, dtype=np.float64)
         m = x.max()
         return float(m + np.log(np.exp(x - m).sum()))
 
     def _compute_avg_logprob(self, prob_list: List[float]) -> float:
+        """Compute the average log probabilities"""
         if (len(prob_list) == 0):
             return (0)
         sum: float = 0
@@ -136,6 +146,7 @@ class ConstrainedDecoding:
         return (sum / len(prob_list))
 
     def _choose_func(self) -> str:
+        """Choose the best function in the context"""
         best_name = ""
         best_prob = float("-inf")
 
@@ -158,6 +169,7 @@ class ConstrainedDecoding:
         return (best_name)
 
     def _get_number_param(self, cast: Callable) -> None:
+        """Get a numerical parameter for the choosen function"""
         buf = ""
         while (True):
             logits = self.llm.get_logits_from_input_ids(self.context)
@@ -172,6 +184,7 @@ class ConstrainedDecoding:
             buf += self.decode([nxt])
 
     def _get_max_logits_index(self, logits: List[float]) -> int:
+        """Get the index of the most probable token"""
         max_i = 0
         for i, v in enumerate(logits):
             if logits[max_i] < v:
@@ -179,6 +192,7 @@ class ConstrainedDecoding:
         return (max_i)
 
     def _get_string_param(self) -> None:
+        """Get a string parameter for the choosen function"""
         self.context.append(self.QUOTE_TOKEN)
         self.out.append(self.QUOTE_TOKEN)
         while (True):
@@ -196,12 +210,14 @@ class ConstrainedDecoding:
         self.out.append(self.QUOTE_TOKEN)
 
     def _get_bool_param(self) -> None:
+        """Get a boolean parameter for the choosen function"""
         logits = self.llm.get_logits_from_input_ids(self.context)
         nxt = self._choose_constrained_token(logits, self.BOOL_ALLOWED)
         self.out.append(nxt)
         self.context.append(nxt)
 
     def _get_param(self, param_type: Dict[str, Any]) -> None:
+        """Get a parameter for the choosen function"""
         match param_type["type"]:
             case "number" | "float":
                 self._get_number_param(float)
@@ -213,12 +229,14 @@ class ConstrainedDecoding:
                 self._get_string_param()
 
     def _add_string(self, s: str) -> None:
+        """Add a constant string to context and output"""
         token_list = self.encode(s)
         for i in token_list:
             self.out.append(i)
             self.context.append(i)
 
     def run(self, prompt: str) -> str:
+        """Constrained decoding entry point"""
         prompt = json.dumps(prompt)[1:-1]
         self.context = self.encode(prompt)
         self.out = []

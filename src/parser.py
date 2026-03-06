@@ -11,13 +11,10 @@ class Validate(BaseModel):
     @model_validator(mode="after")
     def _validate_all(self) -> Self:
         self.validate_defs()
-        self.validate_prompts()
         return (self)
 
-    def validate_prompts(self) -> None:
-        pass
-
     def validate_defs(self) -> None:
+        """Check if the definition file is correct"""
         if (not len(self.function_defs)):
             print("The function list is empty")
             exit()
@@ -44,17 +41,20 @@ class Validate(BaseModel):
         exit()
 
     def validate_param(self, param: Dict) -> int:
+        """Check if function paramters is good"""
         if (not isinstance(param, dict)):
             return (1)
         if (not param.get("type")):
             return (1)
         if (not isinstance(param["type"], str)):
             return (1)
-        # if (param["type"] not in ["number", "string", "bool", "boolean"]):
-        #     return (1)
+        if (param["type"] not in ["number", "string", "bool", "boolean",
+                                  "int", "integer", "float"]):
+            return (1)
         return (0)
 
     def validate_parameters(self, params: Dict) -> int:
+        """Check if all function paramters is good"""
         for name, value in params.items():
             if (self.validate_param(value)):
                 return (1)
@@ -67,6 +67,7 @@ class Parser:
         self.prompt_path = prompt_path
 
     def extract_functions(self) -> List[Dict[str, Any]]:
+        """Extract the definition JSON to a pythno dict"""
         try:
             with open(self.functions_defs_path, "r") as file:
                 try:
@@ -84,6 +85,7 @@ class Parser:
         return (data)
 
     def extract_prompt(self) -> List[Dict[str, Any]]:
+        """Extract the prompts JSON to a pythno dict"""
         try:
             with open(self.prompt_path, "r") as file:
                 try:
@@ -100,6 +102,7 @@ class Parser:
         return (prompts)
 
     def run(self) -> Validate:
+        """Run the parsing process"""
         try:
             return (Validate(
                 function_defs=self.extract_functions(),
@@ -107,5 +110,4 @@ class Parser:
             ))
         except ValidationError as e:
             print(e.errors()[0]["msg"])
-            # print(f"{self.functions_defs_path} is not a list of function")
             exit()

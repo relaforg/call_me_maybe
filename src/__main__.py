@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 
 def export_result(output_file: str) -> None:
+    """Export the result into a JSON file"""
     output = Path(output_file)
     directory = output.parent
     directory.mkdir(parents=True, exist_ok=True)
