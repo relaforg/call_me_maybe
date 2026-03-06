@@ -1,9 +1,10 @@
 from llm_sdk import Small_LLM_Model
-from typing import Set, List, Dict, Any, Callable, Optional
+from typing import Set, List, Dict, Any, Callable
 from time import time
 import numpy as np
 import json
 from tqdm import tqdm
+from torch import Tensor
 
 
 class ConstrainedDecoding:
@@ -14,7 +15,7 @@ class ConstrainedDecoding:
             print(f"\n\33[31m[ERROR]: {llm} llm not found\33[0m\n")
             exit()
         self.encode = self._legacy_encode_wrapper
-        self.decode = self.llm.decode
+        self.decode: Callable[[Tensor | List[int]], str] = self.llm.decode
         self.TOOL_CALL_TOKEN = 151657
         self._get_tokenize_function()
         self.func_dict = func_dict
@@ -46,7 +47,7 @@ class ConstrainedDecoding:
     def _legacy_encode_wrapper(self, text: str) -> List[int]:
         return (self.llm.encode(text)[0].tolist())
 
-    def _get_tokenize_function(self):
+    def _get_tokenize_function(self) -> None:
         try:
             with open(self.llm.get_path_to_vocab_file(), "r") as f:
                 self.encode_dict = json.load(f)
@@ -67,7 +68,7 @@ class ConstrainedDecoding:
             print("[STATUS]: Switching to legacy tokenization fonctions\n")
             return
 
-    def _vocab_decode(self, tokens: List[int]):
+    def _vocab_decode(self, tokens: Tensor | List[int]) -> str:
         buf = ""
         for token in tokens:
             buf += self.decode_dict[token]

@@ -14,7 +14,7 @@ class Validate(BaseModel):
         self.validate_prompts()
         return (self)
 
-    def validate_prompts(self):
+    def validate_prompts(self) -> None:
         pass
 
     def validate_defs(self) -> None:

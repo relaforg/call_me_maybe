@@ -2,10 +2,9 @@ from .constrained_decoding import ConstrainedDecoding
 import json
 from time import time
 from .parser import Parser
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-from typing import Dict
 
 
 def export_result(output_file: str) -> None:

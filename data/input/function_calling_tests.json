@@ -31,5 +31,26 @@
   },
   {
     "prompt": "Substitute the word 'cat' with 'dog' in 'The cat sat on the mat with another cat'"
+  },
+  {
+    "prompt": "Add 42 and 13.5"
+  },
+  {
+    "prompt": "Add 0 and 0"
+  },
+  {
+    "prompt": "What is the square root of 0?"
+  },
+  {
+    "prompt": "Reverse the string \"racecar\""
+  },
+  {
+    "prompt": "Generate a greeting for the name \"O'Connor\""
+  },
+  {
+    "prompt": "Replace all digits in \"abc123def456\" with \"#\""
+  },
+  {
+    "prompt": "Replace every occurrence of \"aaa\" in \"aaaaaa\" with \"b\""
   }
 ]
